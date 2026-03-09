@@ -1,0 +1,12 @@
+# 16-bit RISC Processor Simulator - Dependencies
+# Python 3.8 or higher required
+
+# GUI Framework
+PySide6>=6.4.0
+PySide6-Essentials>=6.4.0
+PySide6-Addons>=6.4.0
+
+# Standard Library (included with Python)
+# - sys: System-specific parameters
+# - re: Regular expressions for assembly parsing
+# - copy: Deep copy for pipeline state management

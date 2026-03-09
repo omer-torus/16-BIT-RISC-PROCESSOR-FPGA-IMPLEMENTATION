@@ -1,0 +1,373 @@
+================================================================================
+          16-bit RISC Processor - Verilog Simulation Guide
+================================================================================
+
+QUICK START GUIDE
+================================================================================
+
+1. INSTALL REQUIRED TOOLS
+   -----------------------
+   Ubuntu/Debian:
+     $ sudo apt-get install iverilog gtkwave
+   
+   macOS (Homebrew):
+     $ brew install icarus-verilog gtkwave
+   
+   Windows:
+     Download from http://bleyer.org/icarus/ and http://gtkwave.sourceforge.net/
+
+
+2. RUN ALL TESTS
+   -------------
+   $ make test-all
+   
+   This will run:
+   - ALU unit test
+   - Hazard detection test
+   - Full processor test
+   - Control hazard test
+   - Pipeline visualization test
+
+
+3. RUN INDIVIDUAL TESTS
+   --------------------
+   $ make processor      # Main processor test
+   $ make alu           # ALU operations test
+   $ make hazard        # Hazard detection test
+   $ make control       # Branch/jump test
+   $ make pipeline      # Pipeline visualization
+
+
+4. VIEW WAVEFORMS
+   --------------
+   $ make view-processor
+   $ make view-control
+   $ make view-pipeline
+
+
+DETAILED SIMULATION INSTRUCTIONS
+================================================================================
+
+STEP 1: Syntax Check
+---------------------
+Before running simulations, check for syntax errors:
+
+  $ make check
+
+This compiles all Verilog files without running simulation.
+
+
+STEP 2: Run ALU Test
+--------------------
+Test all ALU operations (ADD, SUB, AND, OR, SLT, SLL, SRL):
+
+  $ make alu
+
+Expected output:
+  ADD: 100 + 50 = 150 (Expected: 150)
+  SUB: 100 - 50 = 50 (Expected: 50)
+  AND: 0xFF00 & 0x0F0F = 0x0F00 (Expected: 0x0F00)
+  ...
+
+
+STEP 3: Run Hazard Detection Test
+----------------------------------
+Test load-use hazard detection and data forwarding:
+
+  $ make hazard
+
+Expected output:
+  Test 1: Load-Use Hazard Detection
+    Result: Stall=1, PC_Write=0, IF_ID_Write=0
+  
+  Test 3: EX/MEM Stage Forwarding
+    Result: Forward_A=10 (from EX/MEM), Forward_B=00 (no forward)
+  ...
+
+
+STEP 4: Run Full Processor Test
+--------------------------------
+Test complete instruction execution with hazards:
+
+  $ make processor
+
+This runs a test program that includes:
+  - Immediate instructions (ADDI)
+  - Arithmetic operations (ADD, SUB)
+  - Memory operations (LW, SW)
+  - Load-use hazard scenario
+
+Expected final register values:
+  R1 = 10
+  R2 = 20
+  R3 = 30
+  R4 = 10
+  R5 = 30
+  R6 = 40
+
+Expected memory contents:
+  MEM[0] = 30
+  MEM[1] = 10
+  MEM[2] = 40
+
+
+STEP 5: Run Control Hazard Test
+--------------------------------
+Test branch and jump instructions with pipeline flushing:
+
+  $ make control
+
+This tests:
+  - BEQ (Branch if Equal)
+  - BNE (Branch if Not Equal)
+  - J (Jump)
+  - JAL (Jump and Link)
+  - JR (Jump Register)
+
+Expected final register values:
+  R1 = 6
+  R2 = 25
+  R3 = 101
+  R7 = 10 (return address)
+
+
+STEP 6: Run Pipeline Visualization
+-----------------------------------
+See detailed pipeline state for each cycle:
+
+  $ make pipeline
+
+Output shows:
+  ========== Cycle 1 ==========
+  PC = 0
+  IF/ID: Valid | PC=0 | Inst=0x7210
+  ID/EX: Bubble
+  EX/MEM: Bubble
+  MEM/WB: Bubble
+  
+  ========== Cycle 2 ==========
+  PC = 1
+  IF/ID: Valid | PC=1 | Inst=0x7414
+  ID/EX: Valid | PC=0 | RegWrite=1 | MemRead=0 | MemWrite=0
+  ...
+
+
+STEP 7: View Waveforms
+----------------------
+After running processor, control, or pipeline tests, view waveforms:
+
+  $ make view-processor
+  
+This opens GTKWave with the generated VCD file.
+
+Important signals to view:
+  - uut.clk
+  - uut.pc
+  - uut.instruction
+  - uut.stall
+  - uut.flush
+  - uut.regfile.registers[1] through registers[7]
+  - uut.forward_a
+  - uut.forward_b
+
+
+UNDERSTANDING TEST RESULTS
+================================================================================
+
+1. ALU Test Results
+   -----------------
+   ✓ All operations should match expected values
+   ✓ Zero flag should be high when result is 0
+
+
+2. Hazard Detection Results
+   -------------------------
+   ✓ Stall should activate when load-use hazard detected
+   ✓ PC and IF/ID should freeze during stall
+   ✓ Forwarding should occur for EX/MEM and MEM/WB stages
+   ✓ R0 should never trigger forwarding
+
+
+3. Processor Test Results
+   -----------------------
+   ✓ Instructions should execute in correct order
+   ✓ Registers should contain correct values
+   ✓ Memory should be updated correctly
+   ✓ Load-use hazard should cause 1-cycle stall
+
+
+4. Control Hazard Results
+   -----------------------
+   ✓ Branches should jump to correct target when taken
+   ✓ JAL should save return address in R7
+   ✓ JR should jump to address in register
+   ✓ Pipeline should flush 2 instructions on branch/jump
+
+
+DEBUGGING TIPS
+================================================================================
+
+Problem: Simulation doesn't run
+Solution: 
+  - Check if iverilog is installed: $ iverilog -v
+  - Check for syntax errors: $ make check
+  - Look for error messages in terminal output
+
+
+Problem: Wrong register values
+Solution:
+  - Run pipeline visualization: $ make pipeline
+  - Check if forwarding is working correctly
+  - Verify hazard detection is inserting stalls
+  - Check register file write enable signal
+
+
+Problem: Memory not updating
+Solution:
+  - Check mem_write signal in waveform
+  - Verify address calculation (ALU result)
+  - Check if data memory module is being written
+
+
+Problem: Infinite loop or no completion
+Solution:
+  - Check branch condition (zero flag)
+  - Verify PC increment logic
+  - Look for stuck pipeline stages
+  - Check if program is loaded correctly
+
+
+WAVEFORM ANALYSIS
+================================================================================
+
+Key Signals to Monitor:
+  
+  Clock & Control:
+    - clk                 : System clock
+    - rst                 : Reset signal
+    - pc                  : Program counter
+    - cycle_count         : Cycle counter
+  
+  Pipeline Stages:
+    - if_id_valid         : IF/ID stage has valid instruction
+    - id_ex_valid         : ID/EX stage has valid instruction
+    - ex_mem_valid        : EX/MEM stage has valid instruction
+    - mem_wb_valid        : MEM/WB stage has valid instruction
+  
+  Hazard Signals:
+    - stall               : Pipeline stall (load-use hazard)
+    - flush               : Pipeline flush (branch/jump)
+    - forward_a[1:0]      : Forwarding control for operand A
+    - forward_b[1:0]      : Forwarding control for operand B
+  
+  Register File:
+    - regfile.registers[0] through [7]
+  
+  Data Memory:
+    - dmem.memory[0] through [255]
+  
+  ALU:
+    - alu_result          : ALU output
+    - zero                : Zero flag
+
+
+PERFORMANCE METRICS
+================================================================================
+
+After running processor test, check:
+
+1. CPI (Cycles Per Instruction)
+   - Ideal CPI = 1.0 (one instruction per cycle after pipeline fill)
+   - Actual CPI will be higher due to hazards
+
+2. Pipeline Efficiency
+   - Efficiency = (Ideal Cycles / Actual Cycles) × 100%
+   - Lower efficiency indicates more stalls/flushes
+
+3. Hazard Statistics
+   - Count of data hazards (load-use)
+   - Count of control hazards (branches/jumps)
+   - Forwarding operations (stalls prevented)
+
+
+MANUAL SIMULATION (WITHOUT MAKEFILE)
+================================================================================
+
+If you prefer to run simulations manually:
+
+Compile:
+  $ iverilog -g2012 -Wall -o processor_test.out \
+    register_file.v alu.v control_unit.v \
+    hazard_detection_unit.v forwarding_unit.v \
+    pipeline_registers.v instruction_memory.v \
+    data_memory.v processor_top.v tb_processor.v
+
+Run:
+  $ vvp processor_test.out
+
+View waveform:
+  $ gtkwave processor_test.vcd
+
+
+CLEANING UP
+================================================================================
+
+Remove all generated files:
+  $ make clean
+
+This removes:
+  - *.out files (compiled simulation)
+  - *.vcd files (waveform data)
+  - *.lxt files (waveform data)
+  - *.vvp files (intermediate files)
+
+
+TROUBLESHOOTING
+================================================================================
+
+Error: "command not found: iverilog"
+  → Install Icarus Verilog (see INSTALL REQUIRED TOOLS above)
+
+Error: "syntax error"
+  → Check Verilog syntax in reported file
+  → Run: make check
+
+Error: "No such file or directory"
+  → Ensure all .v files are in current directory
+  → Check file names match exactly
+
+Error: GTKWave doesn't open
+  → Install GTKWave
+  → Or manually open: gtkwave processor_test.vcd
+
+Warning: "timescale directive ignored"
+  → Safe to ignore - doesn't affect functionality
+
+
+ADDITIONAL RESOURCES
+================================================================================
+
+Icarus Verilog Documentation:
+  http://iverilog.icarus.com/
+
+GTKWave Documentation:
+  http://gtkwave.sourceforge.net/gtkwave.pdf
+
+Verilog Tutorial:
+  https://www.asic-world.com/verilog/
+
+
+SUPPORT
+================================================================================
+
+For questions or issues with the Verilog implementation:
+  1. Check this simulation guide
+  2. Review the VERILOG_README.md file
+  3. Examine test bench output carefully
+  4. Use waveform viewer for detailed analysis
+
+
+================================================================================
+                          End of Simulation Guide
+================================================================================
+

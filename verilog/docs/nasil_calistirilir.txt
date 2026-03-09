@@ -1,0 +1,87 @@
+NASIL ÇALIŞTIRILIR (ModelSim İçin)
+============================================================
+Bu dosyada, projeyi ModelSim'de hatasız şekilde çalıştırmak ve 
+Hazard Management testlerini (Stall, Flush, Forwarding) doğrulamak 
+için gerekli tüm komutlar yer almaktadır.
+
+ADIM 1: ModelSim Transcript Penceresini Temizleyin
+------------------------------------------------------------
+Önceki simülasyonlardan kalan hataları önlemek için ModelSim
+konsolunda şu komutu çalıştırarak simülasyonu durdurun:
+
+quit -sim
+
+ADIM 2: Derleme ve Çalıştırma Komutları
+------------------------------------------------------------
+Aşağıdaki bloktaki kodların TAMAMINI kopyalayıp ModelSim'in 
+Transcript penceresine yapıştırın ve Enter'a basın.
+
+(Not: "vdel" hatası alırsanız ModelSim'i kapatıp açın ve tekrar deneyin.)
+
+--- KOPYALA BAŞLA ---
+
+# 1. Çalışma klasörünü temizle ve oluştur
+vdel -all
+vlib work
+
+# 2. Tüm Verilog dosyalarını derle
+vlog register_file.v alu.v control_unit.v hazard_detection_unit.v \
+     forwarding_unit.v pipeline_registers.v instruction_memory.v \
+     data_memory.v processor_top.v cpu_top.v tb_cpu_top.v
+
+# 3. Simülasyonu başlat (Optimizations açık)
+vsim -voptargs=+acc work.tb_cpu_top
+
+# 4. Dalga Pencerelerini (Waveforms) Ayarla
+add wave -noupdate -divider "SYSTEM"
+add wave -noupdate -format Logic /tb_cpu_top/clk
+add wave -noupdate -format Logic /tb_cpu_top/rst
+add wave -noupdate -radix unsigned -label "Cycle Count" /tb_cpu_top/dut/cycle_counter
+
+add wave -noupdate -divider "PC & FETCH"
+add wave -noupdate -radix unsigned -label "PC" /tb_cpu_top/dut/pc
+add wave -noupdate -radix hexadecimal -label "Instruction" /tb_cpu_top/dut/if_instruction
+add wave -noupdate -label "PC Write" /tb_cpu_top/dut/pc_write
+
+add wave -noupdate -divider "CONTROL UNIT"
+add wave -noupdate -radix binary -label "Opcode" /tb_cpu_top/dut/id_opcode
+add wave -noupdate -label "Reg Write" /tb_cpu_top/dut/id_reg_write
+add wave -noupdate -label "Mem Write" /tb_cpu_top/dut/id_mem_write
+add wave -noupdate -label "Branch" /tb_cpu_top/dut/id_branch
+add wave -noupdate -label "ALU Src" /tb_cpu_top/dut/id_alu_src
+
+add wave -noupdate -divider "HAZARD UNIT"
+add wave -noupdate -color Red -label "STALL" /tb_cpu_top/dut/stall
+add wave -noupdate -color Orange -label "FLUSH" /tb_cpu_top/dut/flush
+add wave -noupdate -label "IF/ID Write" /tb_cpu_top/dut/if_id_write
+
+add wave -noupdate -divider "ALU & EXECUTE"
+add wave -noupdate -radix hexadecimal -label "ALU Result" /tb_cpu_top/dut/ex_alu_result
+add wave -noupdate -label "Zero Flag" /tb_cpu_top/dut/ex_zero
+add wave -noupdate -radix binary -label "Forward A" /tb_cpu_top/dut/forward_a
+add wave -noupdate -radix binary -label "Forward B" /tb_cpu_top/dut/forward_b
+
+add wave -noupdate -divider "REGISTERS (R0-R7)"
+add wave -noupdate -radix hexadecimal /tb_cpu_top/dut/u_regfile/registers
+
+# 5. Simülasyonu Koştur
+run -all
+zoom full
+
+--- KOPYALA BİTİR ---
+
+BEKLENEN ÇIKTI
+------------------------------------------------------------
+Transcript penceresinde en altta şunları görmelisiniz:
+
+Test Summary
+============================================
+PASSED: 22
+FAILED: 0
+
+*** ALL TESTS PASSED ***
+Hazard Management: VERIFIED
+============================================
+
+Tebrikler! İşlemciniz %100 doğru çalışıyor.
+
