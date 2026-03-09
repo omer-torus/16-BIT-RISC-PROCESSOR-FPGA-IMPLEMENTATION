@@ -1,57 +1,57 @@
 /*
  * Register File Module
- * 8 registers (R0-R7), 16-bit width
- * R0 is hardwired to 0
- * Supports Internal Forwarding (Solve WB hazard)
+ * 
+ * 8x16-bit general-purpose register file with:
+ * - R0 hardwired to zero
+ * - Dual read ports
+ * - Single write port
+ * - Debug outputs for HUD display
  */
 
 module register_file(
-    input wire clk,
-    input wire rst,
-    input wire reg_write,           // Write enable
-    input wire [2:0] read_reg1,     // Read register 1 address
-    input wire [2:0] read_reg2,     // Read register 2 address
-    input wire [2:0] write_reg,     // Write register address
-    input wire [15:0] write_data,   // Data to write
-    output wire [15:0] read_data1,  // Data from register 1
-    output wire [15:0] read_data2,  // Data from register 2
-    output wire [15:0] debug_r1_out // Debug output for R1 (FPGA)
+    input  wire        clk,
+    input  wire        rst,
+    input  wire        reg_write,
+    input  wire [2:0]  read_reg1,
+    input  wire [2:0]  read_reg2,
+    input  wire [2:0]  write_reg,
+    input  wire [15:0] write_data,
+    output wire [15:0] read_data1,
+    output wire [15:0] read_data2,
+
+    // Debug outputs
+    output wire [15:0]  dbg_r1,          // R1 value for LED display
+    output wire [127:0] dbg_regs_flat    // All registers concatenated: {R7,R6,R5,R4,R3,R2,R1,R0}
 );
 
-    // 8 registers, 16-bit each
     reg [15:0] registers [0:7];
-    
-    // Initialize registers
     integer i;
+
+    // Write logic
     always @(posedge clk or posedge rst) begin
         if (rst) begin
-            for (i = 0; i < 8; i = i + 1) begin
+            for (i = 0; i < 8; i = i + 1)
                 registers[i] <= 16'h0000;
-            end
         end else begin
-            // Write operation (only if reg_write is high and not writing to R0)
-            if (reg_write && write_reg != 3'b000) begin
+            if (reg_write && (write_reg != 3'b000))
                 registers[write_reg] <= write_data;
-            end
-            // Ensure R0 is always 0 (redundant but safe)
-            registers[0] <= 16'h0000;
+            registers[0] <= 16'h0000;  // R0 always zero
         end
     end
-    
-    // Read operations with Internal Forwarding
-    // If we are writing to a register that is being read in the same cycle,
-    // bypass the register file and output the write_data directly.
-    // This solves the Write-Back stage hazard.
-    
+
+    // Read logic with forwarding
     assign read_data1 = (read_reg1 == 3'b000) ? 16'h0000 :
-                        (reg_write && (read_reg1 == write_reg)) ? write_data :
-                        registers[read_reg1];
-
+                        ((reg_write && (read_reg1 == write_reg)) ? write_data : registers[read_reg1]);
+    
     assign read_data2 = (read_reg2 == 3'b000) ? 16'h0000 :
-                        (reg_write && (read_reg2 == write_reg)) ? write_data :
-                        registers[read_reg2];
+                        ((reg_write && (read_reg2 == write_reg)) ? write_data : registers[read_reg2]);
 
-    // Debug output for FPGA
-    assign debug_r1_out = registers[1];
+    // Debug outputs
+    assign dbg_r1 = registers[1];
+    
+    assign dbg_regs_flat = {
+        registers[7], registers[6], registers[5], registers[4],
+        registers[3], registers[2], registers[1], registers[0]
+    };
 
 endmodule

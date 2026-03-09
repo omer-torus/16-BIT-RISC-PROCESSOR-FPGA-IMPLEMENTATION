@@ -1,6 +1,7 @@
 /*
  * Pipeline Register Modules
  * Stores data between pipeline stages
+ * Updated: Propagates Instruction Word (IR) for Debugging
  */
 
 // ==================== IF/ID Pipeline Register ====================
@@ -18,7 +19,7 @@ module if_id_register(
 
     always @(posedge clk or posedge rst) begin
         if (rst || flush) begin
-            id_instruction <= 16'h0000;
+            id_instruction <= 16'hF000; // NOP (Fix: Show F in HUD during flush)
             id_pc <= 8'h00;
             valid <= 1'b0;
         end else if (!stall) begin
@@ -36,6 +37,9 @@ module id_ex_register(
     input wire clk,
     input wire rst,
     input wire flush,               // Flush signal
+    
+    // Debug Instruction Propagation
+    input wire [15:0] id_instruction, // NEW
     
     // Control signals
     input wire id_reg_write,
@@ -62,6 +66,8 @@ module id_ex_register(
     input wire [3:0] id_opcode,
     
     // Outputs
+    output reg [15:0] ex_instruction, // NEW
+    
     output reg ex_reg_write,
     output reg ex_mem_write,
     output reg ex_mem_read,
@@ -87,6 +93,7 @@ module id_ex_register(
 
     always @(posedge clk or posedge rst) begin
         if (rst || flush) begin
+            ex_instruction <= 16'hF000; // NOP
             ex_reg_write <= 1'b0;
             ex_mem_write <= 1'b0;
             ex_mem_read <= 1'b0;
@@ -109,6 +116,7 @@ module id_ex_register(
             ex_opcode <= 4'h0;
             valid <= 1'b0;
         end else begin
+            ex_instruction <= id_instruction; // Propagate
             ex_reg_write <= id_reg_write;
             ex_mem_write <= id_mem_write;
             ex_mem_read <= id_mem_read;
@@ -140,6 +148,9 @@ module ex_mem_register(
     input wire clk,
     input wire rst,
     
+    // Debug
+    input wire [15:0] ex_instruction, // NEW
+    
     // Control signals
     input wire ex_reg_write,
     input wire ex_mem_write,
@@ -155,6 +166,8 @@ module ex_mem_register(
     input wire ex_zero,
     
     // Outputs
+    output reg [15:0] mem_instruction, // NEW
+    
     output reg mem_reg_write,
     output reg mem_mem_write,
     output reg mem_mem_read,
@@ -170,6 +183,7 @@ module ex_mem_register(
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin
+            mem_instruction <= 16'hF000; // NOP
             mem_reg_write <= 1'b0;
             mem_mem_write <= 1'b0;
             mem_mem_read <= 1'b0;
@@ -182,6 +196,7 @@ module ex_mem_register(
             mem_zero <= 1'b0;
             valid <= 1'b0;
         end else begin
+            mem_instruction <= ex_instruction; // Propagate
             mem_reg_write <= ex_reg_write;
             mem_mem_write <= ex_mem_write;
             mem_mem_read <= ex_mem_read;
@@ -203,6 +218,9 @@ module mem_wb_register(
     input wire clk,
     input wire rst,
     
+    // Debug
+    input wire [15:0] mem_instruction, // NEW
+
     // Control signals
     input wire mem_reg_write,
     input wire [1:0] mem_mem_to_reg,  // 2-bit
@@ -215,6 +233,8 @@ module mem_wb_register(
     input wire [7:0] mem_pc,         // EKLENDİ: JAL için PC taşıma
     
     // Outputs
+    output reg [15:0] wb_instruction, // NEW
+
     output reg wb_reg_write,
     output reg [1:0] wb_mem_to_reg,  // 2-bit
     output reg [1:0] wb_reg_dst,     // 2-bit (NEW)
@@ -227,6 +247,7 @@ module mem_wb_register(
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin
+            wb_instruction <= 16'hF000; // NOP
             wb_reg_write <= 1'b0;
             wb_mem_to_reg <= 2'b00;
             wb_reg_dst <= 2'b00;
@@ -236,6 +257,7 @@ module mem_wb_register(
             wb_pc <= 8'h00;
             valid <= 1'b0;
         end else begin
+            wb_instruction <= mem_instruction; // Propagate
             wb_reg_write <= mem_reg_write;
             wb_mem_to_reg <= mem_mem_to_reg;
             wb_reg_dst <= mem_reg_dst;
@@ -248,4 +270,3 @@ module mem_wb_register(
     end
 
 endmodule
-
