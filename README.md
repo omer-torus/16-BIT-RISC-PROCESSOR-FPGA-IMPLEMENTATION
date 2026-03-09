@@ -198,7 +198,7 @@ R6 = 0x0028    R7 = 0x0000
 
 ```bash
 # Step 1: Clone the repository
-git clone https://github.com/omer-torus/16-BIT-RISC-PROCESSOR-DESIGN-PROJECT.git
+git clone https://github.com/omer-torus/16-BIT-RISC-PROCESSOR-FPGA-IMPLEMENTATION.git
 cd 16-BIT-RISC-PROCESSOR-DESIGN-PROJECT
 
 # Step 2: Install dependencies
