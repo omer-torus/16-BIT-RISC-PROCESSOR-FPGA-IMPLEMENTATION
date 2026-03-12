@@ -338,6 +338,7 @@ INST2             <- flushed if branch is taken
 
 ---
 
+
 ## Acknowledgments
 
 - MIPS architecture — design reference
